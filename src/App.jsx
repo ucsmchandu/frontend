@@ -10,6 +10,8 @@ const App = () => {
   const [userInput, setUserInput] = useState("");
   const [explanation, setExplanation] = useState("");
   const [plan, setPlan] = useState(null);
+  const [versions, setVersions] = useState([]);
+  const [loading, setLoading] = useState(false);
   // const testPlan = {
   //   type: "create",
   //   components: [
@@ -57,20 +59,56 @@ const App = () => {
   // },[])
 
   const handleGenerate = async () => {
-    if (!userInput) {
-      alert("input required");
+    try {
+      setLoading(true);
+      if (!userInput) {
+        alert("input required");
+        return;
+      }
+      const res = await axios.post("http://localhost:3000/generate", {
+        message: userInput,
+        previousCode: generatedCode,
+      });
+
+      const newPlan = res.data.plan;
+
+      setGeneratedCode(res.data.code);
+      setExplanation(res.data.explanation);
+      setPlan(newPlan);
+
+      // store versions
+      setVersions((prev) => [
+        ...prev,
+        {
+          plan: newPlan,
+          explanation: res.data.explanation,
+          code: res.data.code,
+        },
+      ]);
+      // console.log(res.data.code);
+      // console.log(JSON.stringify(newPlan,null,2));
+      // console.log(res.data.explanation);
+    } catch (err) {
+      console.log(err);
+      console.log(err.message);
+      alert("something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRollback = () => {
+    if (versions.length < 2) {
+      alert("No previous versions available");
       return;
     }
-    const res = await axios.post("http://localhost:3000/generate", {
-      message: userInput,
-      previousCode: generatedCode,
-    });
 
-    setGeneratedCode(res.data.code);
-    setExplanation(res.data.explanation);
-    setPlan(res.data.plan);
-    console.log(res.data.code);
-    console.log(res.data.explanation);
+    const previousVersion = versions[versions.length - 2];
+    setPlan(previousVersion.plan);
+    setExplanation(previousVersion.explanation);
+    setGeneratedCode(previousVersion.code);
+
+    setVersions((prev) => prev.slice(0, -1));
   };
   return (
     <>
@@ -82,7 +120,7 @@ const App = () => {
           </h1>
         </div>
 
-        {/* MAIN CONTENT */}
+        {/*main */}
         <div className="flex flex-1 overflow-hidden">
           {/* LEFT PANEL - CHAT */}
           <div className="w-1/3 bg-white border-r flex flex-col p-6">
@@ -98,7 +136,7 @@ const App = () => {
             />
 
             <div className="mt-4">
-              <Button onClick={handleGenerate} label="Generate UI" />
+              <Button onClick={handleGenerate} label="Generate UI" loading={loading} />
             </div>
 
             {/* Explanation */}
@@ -114,10 +152,15 @@ const App = () => {
 
           {/* RIGHT PANEL - CODE */}
           <div className="w-2/3 bg-white flex flex-col p-6">
-            <h2 className="text-lg font-semibold mb-4 text-gray-700">
-              Generated Plan (JSON)
-            </h2>
-
+            <div className="flex justify-between">
+              <h2 className="text-lg font-semibold mb-4 text-gray-700">Code</h2>
+              <button
+                onClick={handleRollback}
+                className="text-xs text-red-500 border rounded-lg cursor-pointer m-2 p-2 hover:shadow-lg hover:underline"
+              >
+                Rollback to previous
+              </button>
+            </div>
             <textarea
               className="flex-1 border rounded-lg p-3 font-mono text-xs resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={generatedCode}
@@ -126,7 +169,7 @@ const App = () => {
           </div>
         </div>
 
-        {/* PREVIEW SECTION */}
+        {/* PREVIEW */}
         <div className="h-1/3 bg-white border-t p-6 overflow-auto">
           <h2 className="text-lg font-semibold mb-4 text-gray-700">
             Live Preview

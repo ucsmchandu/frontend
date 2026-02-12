@@ -1,13 +1,23 @@
 import React from "react";
-const Button=({ label, onClick })=> {
+
+const Button = ({ label, onClick, loading  }) => {
   return (
     <button
       onClick={onClick}
-      className="px-4 cursor-pointer py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+      disabled={loading}
+      className={`px-4 py-2 rounded-lg transition flex items-center justify-center gap-2
+        ${loading
+          ? "bg-blue-400 cursor-not-allowed"
+          : "bg-blue-600 hover:bg-blue-700 cursor-pointer"
+        }
+        text-white`}
     >
-      {label}
+      {loading && (
+        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+      )}
+      {loading ? "Generating..." : label}
     </button>
   );
-}
+};
 
 export default Button;
